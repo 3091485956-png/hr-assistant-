@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR辅助器 | 在命令与回应之间</title>
+  <link rel="icon" type="image/png" href="public/images/app-icon.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;600&display=swap');
+
+    :root {
+      --bg-primary: #f5f0eb;
+      --bg-secondary: rgba(255,255,255,0.7);
+      --bg-card: rgba(255,255,255,0.6);
+      --text-primary: #2c2420;
+      --text-secondary: #6b5d54;
+      --text-muted: #a89b91;
+      --accent: #c75b3f;
+      --accent-soft: #e8a87c;
+      --border: rgba(44,36,32,0.1);
+      --shadow: rgba(44,36,32,0.08);
+      --glow: rgba(199,91,63,0.15);
+      --code-bg: rgba(44,36,32,0.05);
+      --tip-bg: rgba(199,91,63,0.08);
+      --step-num-bg: linear-gradient(135deg, var(--accent), var(--accent-soft));
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: rgba(17,24,58,0.7);
+      --bg-card: rgba(17,24,58,0.5);
+      --text-primary: #e8e4f0;
+      --text-secondary: #a3b3cc;
+      --text-muted: #5a6a8a;
+      --accent: #00d4ff;
+      --accent-soft: #8b5cf6;
+      --border: rgba(0,212,255,0.15);
+      --shadow: rgba(0,0,0,0.3);
+      --glow: rgba(0,212,255,0.2);
+      --code-bg: rgba(0,212,255,0.08);
+      --tip-bg: rgba(0,212,255,0.08);
+      --step-num-bg: linear-gradient(135deg, #00d4ff, #8b5cf6);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Serif SC', 'Georgia', serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background 0.8s ease, color 0.5s ease;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* 背景 canvas */
+    #bgCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* 内容层 */
+    .content { position: relative; z-index: 1; }
+
+    /* 导航 */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 1rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(12px);
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      transition: all 0.5s ease;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .logo img { width: 36px; height: 36px; }
+
+    .nav-links { display: flex; gap: 2rem; align-items: center; }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.3s;
+      position: relative;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0; height: 1px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .nav-links a:hover::after { width: 100%; }
+
+    /* 日夜切换 */
+    .mode-toggle {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all 0.4s ease;
+      color: var(--text-secondary);
+    }
+
+    .mode-toggle:hover {
+      transform: rotate(20deg) scale(1.1);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 15px var(--glow);
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8rem 2rem 4rem;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.2rem;
+      border-radius: 100px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      animation: fadeInUp 1s ease;
+    }
+
+    .hero-badge .pulse {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 1.5rem;
+      animation: fadeInUp 1s ease 0.2s both;
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero .subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.4rem);
+      color: var(--text-secondary);
+      max-width: 680px;
+      line-height: 1.8;
+      margin-bottom: 3rem;
+      animation: fadeInUp 1s ease 0.4s both;
+      font-weight: 300;
+    }
+
+    .hero .author {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      animation: fadeInUp 1s ease 0.6s both;
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      animation: bounce 2s infinite;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(10px); }
+    }
+
+    /* Sections */
+    section {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+      position: relative;
+    }
+
+    section.wide {
+      max-width: 960px;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 600;
+      margin-bottom: 2rem;
+      line-height: 1.3;
+    }
+
+    h3 {
+      font-size: clamp(1.2rem, 3vw, 1.6rem);
+      font-weight: 600;
+      margin: 2.5rem 0 1rem;
+      line-height: 1.4;
+      color: var(--text-primary);
+    }
+
+    h4 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.5rem;
+      color: var(--text-primary);
+    }
+
+    p {
+      font-size: 1.05rem;
+      line-height: 1.9;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+
+    p strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 1.5rem;
+      margin: 2.5rem 0;
+      font-style: italic;
+      color: var(--text-primary);
+      font-size: 1.1rem;
+      line-height: 1.9;
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.8s ease;
+    }
+
+    blockquote.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* Feature Cards */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.4s ease;
+      cursor: default;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .feature-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 32px var(--shadow);
+    }
+
+    .feature-card .icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      color: white;
+    }
+
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+      margin-top: 0;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+      margin-top: 3rem;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 0; bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-left: 60px;
+      padding-bottom: 2.5rem;
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.6s ease;
+    }
+
+    .timeline-item.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: 12px;
+      top: 6px;
+      width: 17px; height: 17px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 3px solid var(--bg-primary);
+      box-shadow: 0 0 10px var(--glow);
+      transition: all 0.5s ease;
+    }
+
+    .timeline-item:hover .timeline-dot {
+      transform: scale(1.3);
+      box-shadow: 0 0 20px var(--glow);
+    }
+
+    .timeline-item h4 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: var(--text-primary);
+    }
+
+    .timeline-item p {
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    /* CTA Section */
+    .cta-section {
+      text-align: center;
+      padding: 6rem 2rem;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.9rem 2rem;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Inter', sans-serif;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px var(--glow);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Divider */
+    .divider {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+      margin: 0 auto;
+      border-radius: 1px;
+    }
+
+    /* ==================== 使用说明书样式 ==================== */
+
+    /* 步骤条 */
+    .step-section {
+      margin-bottom: 3.5rem;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.7s ease;
+    }
+
+    .step-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .step-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .step-number {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: var(--step-num-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: white;
+      flex-shrink: 0;
+      box-shadow: 0 4px 15px var(--glow);
+    }
+
+    .step-title-group h3 {
+      margin: 0 0 0.25rem;
+      font-size: 1.3rem;
+    }
+
+    .step-title-group .step-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    /* 子步骤 */
+    .sub-steps {
+      padding-left: calc(48px + 1.2rem);
+    }
+
+    .sub-step {
+      margin-bottom: 1.5rem;
+    }
+
+    .sub-step:last-child {
+      margin-bottom: 0;
+    }
+
+    .sub-step h4 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sub-step h4::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.6;
+    }
+
+    /* 有序列表 */
+    .styled-ol {
+      list-style: none;
+      counter-reset: item;
+      padding: 0;
+      margin: 0;
+    }
+
+    .styled-ol li {
+      counter-increment: item;
+      position: relative;
+      padding-left: 2rem;
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+    }
+
+    .styled-ol li::before {
+      content: counter(item);
+      position: absolute;
+      left: 0;
+      top: 0.15rem;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* 无序列表 */
+    .styled-ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .styled-ul li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.6rem;
+      font-size: 1rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+    }
+
+    .styled-ul li::before {
+      content: '\2014';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      opacity: 0.6;
+    }
+
+    /* 代码块 */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.5rem;
+      margin: 1rem 0;
+      font-family: 'Inter', 'Consolas', monospace;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .code-block .code-label {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.75rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .code-block code {
+      font-family: inherit;
+    }
+
+    /* 提示卡片 */
+    .tip-card {
+      background: var(--tip-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin: 1rem 0;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .tip-card .tip-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--step-num-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+      color: white;
+    }
+
+    .tip-card .tip-content {
+      flex: 1;
+    }
+
+    .tip-card .tip-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .tip-card .tip-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    /* FAQ 手风琴 */
+    .faq-list {
+      margin-top: 2rem;
+    }
+
+    .faq-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .faq-item.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .faq-item:hover {
+      border-color: var(--accent);
+    }
+
+    .faq-question {
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-primary);
+      transition: color 0.3s;
+    }
+
+    .faq-question:hover {
+      color: var(--accent);
+    }
+
+    .faq-toggle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+      margin-left: 1rem;
+    }
+
+    .faq-item.active .faq-toggle {
+      transform: rotate(45deg);
+      background: var(--accent);
+      color: white;
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.4s ease;
+    }
+
+    .faq-item.active .faq-answer {
+      max-height: 500px;
+      padding: 0 1.5rem 1.5rem;
+    }
+
+    .faq-answer p {
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    /* 功能引导卡片 */
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .guide-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .guide-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .guide-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px var(--shadow);
+    }
+
+    .guide-card .guide-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--step-num-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      margin-bottom: 0.75rem;
+      color: white;
+    }
+
+    .guide-card h4 {
+      font-size: 1rem;
+      margin: 0 0 0.5rem;
+    }
+
+    .guide-card p {
+      font-size: 0.9rem;
+      margin: 0;
+      line-height: 1.7;
+    }
+
+    /* 链接样式 */
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: opacity 0.3s;
+    }
+
+    a:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .features { grid-template-columns: 1fr; }
+      .guide-grid { grid-template-columns: 1fr; }
+      nav { padding: 1rem 1.5rem; }
+      .nav-links a { display: none; }
+      .nav-links { gap: 0; }
+      .sub-steps { padding-left: 0; margin-top: 1rem; }
+      .step-header { flex-direction: column; gap: 0.75rem; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links a { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <canvas id="bgCanvas"></canvas>
+
+  <div class="content">
+    <!-- Navigation -->
+    <nav>
+      <a class="logo" href="#">
+        <img src="public/images/app-icon.png" alt="HR辅助器">
+        <span>HR辅助器</span>
+      </a>
+      <div class="nav-links">
+        <a href="#origin">缘起</a>
+        <a href="#journey">远征</a>
+        <a href="#features">功能</a>
+        <a href="#philosophy">沉思</a>
+        <a href="#manual">指南</a>
+        <button class="mode-toggle" id="modeToggle" title="切换模式">&#x263C;</button>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge">
+        <span class="pulse"></span>
+        <span>AI驱动的智能人力资源管理平台</span>
+      </div>
+      <h1>在命令与回应之间</h1>
+      <p class="subtitle">
+        一个文科生用AI造出的完整世界<br>
+        关于技术、存在与人力资源的沉思录
+      </p>
+      <p class="author">
+        大二英语专业学生 &middot; 存在主义爱好者 &middot; AI辅助开发实践者
+      </p>
+      <span class="scroll-hint">&#x2193;</span>
+    </section>
+
+    <!-- Origin -->
+    <section id="origin">
+      <div class="section-label">Chapter I</div>
+      <h2>诚实：这个项目是怎么诞生的</h2>
+      <p>我首先需要诚实地说：这个项目里的绝大多数代码，并不是我亲手一行一行敲出来的。</p>
+      <p>我是英语专业的大二学生，我不会写代码。在决定做这个项目之前，我甚至不知道 React 和 TypeScript 是什么。但我会做一件事——<strong>提出问题，验收答案，理解逻辑</strong>。</p>
+      <p>这个项目是我和 AI 共同完成的。我负责定义需求、描述场景、提出设想、判断好坏；AI 负责把人的语言翻译成机器的语言，把模糊的意图变成精确的代码。在这个意义上，我更像是一个产品负责人、一个验收者、一个用 AI 做事的人。</p>
+      <blockquote>
+        "这不是什么需要隐瞒的事。恰恰相反，这正是我最想说的：在一个 AI 可以编程的时代，人还能做什么？人的价值在哪里？"
+      </blockquote>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Journey -->
+    <section id="journey">
+      <div class="section-label">Chapter II</div>
+      <h2>自造之路：一个文科生的技术远征</h2>
+      <p>我必须诚实地说，在开始做这个项目之前，我连 HTML 是什么都不知道。 div 和 class 对我来说，就是两个陌生的单词拼接在一起。</p>
+      <p>但我始终相信一件事：学习本身就是天赋，而跨界的勇气比天赋更珍贵。</p>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <h4>看见问题</h4>
+          <p>在 HR 实习中，看到每天上百份简历堆在邮箱里，HR 手动录入、筛选、写邮件，大量时间被机械劳动吃掉。</p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <h4>提出问题</h4>
+          <p>如果 AI 能读懂莎士比亚的十四行诗，它能不能读懂一份简历里藏着的、那个人尚未言说的可能性？</p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <h4>定义产品</h4>
+          <p>设计四大功能模块：简历入库、岗位匹配、人才库管理、AI 话术生成。每一个功能都对应一个真实的 HR 痛点。</p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <h4>与 AI 协作</h4>
+          <p>从零开始描述需求，验收每一版代码，调试每一个 bug，直到一个完整的产品诞生在屏幕上。</p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <h4>反思意义</h4>
+          <p>不只是做产品，而是想清一个问题：当 AI 可以做越来越多的事时，人还剩下什么不可替代的价值？</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Features -->
+    <section id="features">
+      <div class="section-label">Product</div>
+      <h2>四大核心功能</h2>
+      <p>每一个功能模块都源于真实的 HR 工作场景，用 AI 接管重复劳动，让 HR 回归真正重要的事——看见人。</p>
+
+      <div class="features">
+        <div class="feature-card">
+          <div class="icon">&#x1F4CB;</div>
+          <h3>简历入库</h3>
+          <p>手动录入候选人信息，支持教育/工作/实习/项目经历的动态增删改。保存后 AI 自动分析个人特质与核心竞争力。</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1F4BC;</div>
+          <h3>岗位表与 AI 匹配</h3>
+          <p>录入岗位 JD 和人才画像，AI 遍历人才库自动匹配，给出匹配度评分、优势分析、不足提醒和面试建议。</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1F465;</div>
+          <h3>人才库管理</h3>
+          <p>全量候选人的追踪管理系统，面试状态与 Offer 进度一目了然。简历修改后自动同步更新人才库。</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1F4AC;</div>
+          <h3>HR 救星</h3>
+          <p>根据岗位 JD 自动生成 5 类沟通话术，支持与 AI 对话优化。根据聊天记录推荐最佳回复选项。</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Philosophy -->
+    <section id="philosophy">
+      <div class="section-label">Philosophy</div>
+      <h2>存在主义之问：AI 带来了人的"存在危机"吗？</h2>
+      <p>做这个项目的过程中，我一直在想这个问题。如果 AI 可以帮我做一个 HR 管理的软件，那未来 AI 是不是可以直接替代 HR？如果 AI 可以读简历、匹配岗位、生成话术，那 HR 这个职业还有什么存在的必要？</p>
+
+      <blockquote>
+        "AI 能读简历，但它不能'看见人'。"
+      </blockquote>
+
+      <p>一份简历在 AI 眼里是一堆关键词的集合——学历、技能、工作年限。但同样一份简历，在一个优秀的 HR 眼里，是一个人的故事。这个人为什么转行？为什么每段工作都做不满两年？这些问题的答案，不在数据里，在人的经验、直觉和共情能力里。</p>
+
+      <blockquote>
+        "AI 能生成话术，但它不能建立信任。"
+      </blockquote>
+
+      <p>一段完美的面试邀请话术，可以写得滴水不漏，但它无法传递一个 HR 对候选人的真诚关心。人不是被话术打动的，人是被另一个真实的人的温度打动的。</p>
+
+      <blockquote>
+        "AI 能匹配分数，但它不能承担选择的重量。"
+      </blockquote>
+
+      <p>当 AI 说"匹配度 85 分"时，这个分数是冰冷的。但 HR 知道，选择一个人、放弃一个人，背后是一个个真实的人生。这种道德重量，只有人才能承担。</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ==================== 使用说明书 ==================== -->
+    <section id="manual" class="wide">
+      <div class="section-label">Manual</div>
+      <h2>使用指南：从零开始到成功运行</h2>
+      <p>如果你完全不懂技术，不用担心。下面的每一步都经过精心拆解，你只需要跟着做，就能在自己的电脑上运行这个软件。</p>
+
+      <!-- 步骤一 -->
+      <div class="step-section">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <div class="step-title-group">
+            <h3>下载项目</h3>
+            <p class="step-desc">将项目从 GitHub 下载到你的电脑</p>
+          </div>
+        </div>
+        <div class="sub-steps">
+          <div class="sub-step">
+            <h4>访问项目页面</h4>
+            <p>用浏览器打开 GitHub 仓库地址：</p>
+            <div class="code-block">
+              <span class="code-label">URL</span>
+              <code>https://github.com/3091485956-png/hr-assistant-</code>
+            </div>
+          </div>
+          <div class="sub-step">
+            <h4>下载压缩包</h4>
+            <ol class="styled-ol">
+              <li>在页面右侧找到绿色的 <strong>&lt;&gt; Code</strong> 按钮，点击它</li>
+              <li>在弹出菜单中选择 <strong>Download ZIP</strong></li>
+              <li>浏览器会下载一个名为 <code>hr-assistant-.zip</code> 的压缩包</li>
+            </ol>
+          </div>
+          <div class="sub-step">
+            <h4>解压到桌面</h4>
+            <ol class="styled-ol">
+              <li>打开"下载"文件夹，找到 <code>hr-assistant-.zip</code></li>
+              <li>右键点击 -> 选择"全部解压缩"（Windows 11）或"解压到当前位置"</li>
+              <li>将解压后的 <code>hr-assistant-</code> 文件夹拖动到桌面</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤二 -->
+      <div class="step-section">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <div class="step-title-group">
+            <h3>安装 Node.js</h3>
+            <p class="step-desc">运行环境只需要安装一次，以后不用再装</p>
+          </div>
+        </div>
+        <div class="sub-steps">
+          <div class="sub-step">
+            <h4>下载并安装</h4>
+            <p>访问 <a href="https://nodejs.org/" target="_blank">nodejs.org</a>，找到绿色的 <strong>LTS</strong> 按钮（写着 "Recommended For Most Users"），点击下载。</p>
+            <div class="tip-card">
+              <div class="tip-icon">&#x1F4A1;</div>
+              <div class="tip-content">
+                <div class="tip-title">安装提示</div>
+                <p class="tip-text">Windows 下载 <code>.msi</code> 文件，Mac 下载 <code>.pkg</code> 文件。双击安装后一直点 Next，所有选项保持默认，最后点 Finish。</p>
+              </div>
+            </div>
+          </div>
+          <div class="sub-step">
+            <h4>确认安装成功</h4>
+            <p>重新打开一个新的终端窗口：</p>
+            <ul class="styled-ul">
+              <li><strong>Windows</strong>：按 <code>Win + R</code>，输入 <code>cmd</code>，按回车</li>
+              <li><strong>Mac</strong>：打开"启动台" -> 搜索"终端" -> 打开</li>
+            </ul>
+            <p>在终端中依次输入：</p>
+            <div class="code-block">
+              <span class="code-label">Terminal</span>
+              <code>node -v<br>npm -v</code>
+            </div>
+            <p>如果都显示版本号（如 <code>v20.x.x</code>），说明安装成功。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤三 -->
+      <div class="step-section">
+        <div class="step-header">
+          <div class="step-number">3</div>
+          <div class="step-title-group">
+            <h3>安装项目依赖</h3>
+            <p class="step-desc">让软件自动下载所需的库文件</p>
+          </div>
+        </div>
+        <div class="sub-steps">
+          <div class="sub-step">
+            <h4>进入项目文件夹</h4>
+            <p>在终端中输入以下命令，进入桌面上的项目文件夹：</p>
+            <div class="code-block">
+              <span class="code-label">Terminal</span>
+              <code>cd Desktop\hr-assistant-</code>
+            </div>
+            <div class="tip-card">
+              <div class="tip-icon">&#x26A0;</div>
+              <div class="tip-content">
+                <div class="tip-title">注意</div>
+                <p class="tip-text">如果你的文件夹名字不同（比如有版本号后缀），请把命令中的 <code>hr-assistant-</code> 替换成你实际的文件夹名字。</p>
+              </div>
+            </div>
+          </div>
+          <div class="sub-step">
+            <h4>执行安装命令</h4>
+            <div class="code-block">
+              <span class="code-label">Terminal</span>
+              <code>npm install</code>
+            </div>
+            <p>按回车后，屏幕会出现大量滚动的文字，这是在下载各种依赖文件。<strong>请耐心等待，不要关闭窗口。</strong> 这个过程通常需要 3 到 10 分钟。</p>
+            <p>当看到类似 <code>added xxx packages in xxm</code> 的输出时，说明安装完成。</p>
+            <div class="tip-card">
+              <div class="tip-icon">&#x1F527;</div>
+              <div class="tip-content">
+                <div class="tip-title">卡住怎么办</div>
+                <p class="tip-text">如果超过 15 分钟没有任何动静，关掉终端重新打开，重新运行 <code>npm install</code>。也可以先切换国内镜像源：<code>npm config set registry https://registry.npmmirror.com</code></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤四 -->
+      <div class="step-section">
+        <div class="step-header">
+          <div class="step-number">4</div>
+          <div class="step-title-group">
+            <h3>创建数据库</h3>
+            <p class="step-desc">SQLite 本地数据库，无需安装额外软件</p>
+          </div>
+        </div>
+        <div class="sub-steps">
+          <div class="sub-step">
+            <h4>同步数据库结构</h4>
+            <p>在终端中输入：</p>
+            <div class="code-block">
+              <span class="code-label">Terminal</span>
+              <code>npm run db:push</code>
+            </div>
+            <p>当看到 <code>[&#10003;] Changes applied</code> 时，数据库就已准备就绪。这一步只需要执行一次。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤五 -->
+      <div class="step-section">
+        <div class="step-header">
+          <div class="step-number">5</div>
+          <div class="step-title-group">
+            <h3>启动项目</h3>
+            <p class="step-desc">让软件在你的电脑上运行起来</p>
+          </div>
+        </div>
+        <div class="sub-steps">
+          <div class="sub-step">
+            <h4>运行开发服务器</h4>
+            <div class="code-block">
+              <span class="code-label">Terminal</span>
+              <code>npm run dev</code>
+            </div>
+            <p>当看到以下输出时，说明软件已经成功运行：</p>
+            <div class="code-block">
+              <span class="code-label">Output</span>
+              <code>VITE v6.x.x  ready in xxx ms<br><br>  &#10148;  Local:   http://localhost:3000/</code>
+            </div>
+          </div>
+          <div class="sub-step">
+            <h4>在浏览器中打开</h4>
+            <p>打开 Chrome、Edge 或 Safari，在地址栏输入：</p>
+            <div class="code-block">
+              <span class="code-label">URL</span>
+              <code>http://localhost:3000</code>
+            </div>
+            <p>按回车，你就会看到 HR辅助器 的登录界面了！</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- 第一次使用 -->
+    <section class="wide">
+      <div class="section-label">First Use</div>
+      <h2>第一次使用指引</h2>
+
+      <div class="guide-grid">
+        <div class="guide-card">
+          <div class="guide-icon">&#x1F510;</div>
+          <h4>注册账号</h4>
+          <p>点击"还没有账号？立即注册"，输入用户名（至少3位）和密码（至少6位），完成注册。</p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-icon">&#x2699;</div>
+          <h4>配置 AI 接口</h4>
+          <p>注册后自动跳转到配置页。选择 AI 服务商，或手动填写 API Base URL、API Key 和模型名称。</p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-icon">&#x1F4CB;</div>
+          <h4>简历入库</h4>
+          <p>录入候选人信息后保存，点击"AI分析"按钮，系统自动生成个人特质与核心竞争力分析。</p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-icon">&#x1F4BC;</div>
+          <h4>岗位与匹配</h4>
+          <p>创建岗位后点击"AI匹配"，系统遍历人才库给出匹配度评分、优势分析和面试建议。</p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-icon">&#x1F465;</div>
+          <h4>人才库追踪</h4>
+          <p>全量候选人管理，面试状态和 Offer 进度一目了然。简历修改后自动同步更新。</p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-icon">&#x1F4AC;</div>
+          <h4>HR 救星</h4>
+          <p>导入岗位 JD，AI 自动生成面试邀请、offer沟通等5类话术，支持对话优化。</p>
+        </div>
+      </div>
+
+      <div class="tip-card" style="margin-top: 2rem;">
+        <div class="tip-icon">&#x1F511;</div>
+        <div class="tip-content">
+          <div class="tip-title">获取 DeepSeek API Key</div>
+          <p class="tip-text">1. 访问 <a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com/api_keys</a><br>2. 登录/注册账号<br>3. 点击"创建API Key"<br>4. 复制生成的 Key，粘贴到软件配置界面</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- 常见问题 -->
+    <section class="wide">
+      <div class="section-label">FAQ</div>
+      <h2>常见问题</h2>
+      <p>遇到问题不要慌，先看看这里有没有答案。</p>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>终端显示"npm 不是内部或外部命令"</span>
+            <span class="faq-toggle">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>Node.js 没有安装成功。请回到"第二步"重新安装，安装完成后务必重新打开终端窗口。</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>npm install 很慢或者卡住</span>
+            <span class="faq-toggle">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>这是网络问题。关掉终端重新打开，再次运行 <code>npm install</code>。如果仍然失败，先运行 <code>npm config set registry https://registry.npmmirror.com</code> 切换国内镜像源，然后再安装。</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>npm run db:push 报错</span>
+            <span class="faq-toggle">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>检查是否进入了正确的文件夹（路径最后应该是 <code>hr-assistant-</code>），然后重新运行。如果仍然报错，确认前面的 <code>npm install</code> 已经成功完成。</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>怎么关闭软件</span>
+            <span class="faq-toggle">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>回到终端窗口，按 <code>Ctrl + C</code>，然后输入 <code>Y</code> 按回车确认。</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>下次怎么重新打开软件</span>
+            <span class="faq-toggle">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>重新打开终端，输入以下命令：<br><code>cd Desktop\hr-assistant-</code><br><code>npm run dev</code><br>然后浏览器访问 <code>http://localhost:3000</code></p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>配置 AI 时"测试连接"失败</span>
+            <span class="faq-toggle">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>检查三点：1) API Base URL 是否填写正确（注意末尾的 <code>/v1</code>）；2) API Key 是否复制完整，没有多余空格；3) 你的网络是否能正常访问该 AI 服务商。推荐使用 DeepSeek，国内访问最稳定。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Future -->
+    <section id="future">
+      <div class="section-label">Future</div>
+      <h2>缺口即入口，不完美才是未来</h2>
+      <p>这个项目当然还有很多不完善的地方：头像上传功能尚未实现，数据可视化仪表盘有待开发，移动端适配还未完成，面试多维评分体系停留在构想阶段。</p>
+      <p>但这些不完美，恰恰是我继续前行的理由。我还年轻，我还在路上。</p>
+
+      <blockquote>
+        "所谓的跨界，不是从 A 跳到 B，而是在 A 和 B 之间，走出一条属于自己的路。"
+      </blockquote>
+
+      <p>我相信未来的 HR，一定是懂技术的 HR；未来的技术，一定是懂人的技术。而我，一个学语言的文科生，正在这两个世界的交界处，笨拙而坚定地搭建桥梁。</p>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+      <div class="section-label">Start</div>
+      <h2>门外有光，我正年轻</h2>
+      <p style="text-align:center; max-width: 500px; margin: 1.5rem auto;">
+        这个项目是我对未来的第一份答卷。<br>
+        未来的路还很长，而我正年轻，正走在光里。
+      </p>
+      <div class="cta-buttons">
+        <a href="https://github.com/3091485956-png/hr-assistant-" class="btn btn-primary" target="_blank">
+          &#x2197; 查看 GitHub 仓库
+        </a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>
+        HR辅助器 &middot; 由一个大二英语专业学生用 AI 协作完成
+      </p>
+      <p style="margin-top:0.5rem;">
+        <a href="https://github.com/3091485956-png/hr-assistant-" target="_blank">GitHub</a>
+        &middot; 2025
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // ==================== 日夜模式切换 ====================
+    const toggle = document.getElementById('modeToggle');
+    const body = document.body;
+    let isDark = false;
+
+    const saved = localStorage.getItem('hr-theme');
+    if (saved === 'dark') {
+      isDark = true;
+      body.setAttribute('data-theme', 'dark');
+      toggle.innerHTML = '&#x263D;';
+    }
+
+    toggle.addEventListener('click', () => {
+      isDark = !isDark;
+      if (isDark) {
+        body.setAttribute('data-theme', 'dark');
+        toggle.innerHTML = '&#x263D;';
+        localStorage.setItem('hr-theme', 'dark');
+      } else {
+        body.removeAttribute('data-theme');
+        toggle.innerHTML = '&#x263C;';
+        localStorage.setItem('hr-theme', 'light');
+      }
+    });
+
+    // ==================== 滚动动画 ====================
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('blockquote, .feature-card, .timeline-item, .step-section, .guide-card, .faq-item').forEach(el => {
+      observer.observe(el);
+    });
+
+    // ==================== FAQ 手风琴 ====================
+    document.querySelectorAll('.faq-question').forEach(q => {
+      q.addEventListener('click', () => {
+        const item = q.parentElement;
+        const isActive = item.classList.contains('active');
+
+        // 关闭所有
+        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+
+        // 切换当前
+        if (!isActive) {
+          item.classList.add('active');
+        }
+      });
+    });
+
+    // ==================== Canvas 粒子背景 ====================
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let w, h;
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    class Particle {
+      constructor() { this.reset(); }
+
+      reset() {
+        this.x = Math.random() * w;
+        this.y = Math.random() * h;
+        this.size = Math.random() * 2 + 0.5;
+        this.speedX = (Math.random() - 0.5) * 0.3;
+        this.speedY = (Math.random() - 0.5) * 0.3;
+        this.opacity = Math.random() * 0.5 + 0.1;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.x < 0 || this.x > w || this.y < 0 || this.y > h) this.reset();
+      }
+
+      draw() {
+        const isDarkMode = body.getAttribute('data-theme') === 'dark';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        if (isDarkMode) {
+          const hue = 180 + Math.random() * 80;
+          ctx.fillStyle = `hsla(${hue}, 80%, 65%, ${this.opacity})`;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = `hsla(${hue}, 80%, 65%, 0.3)`;
+        } else {
+          const hue = 15 + Math.random() * 30;
+          ctx.fillStyle = `hsla(${hue}, 60%, 55%, ${this.opacity * 0.6})`;
+          ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 60; i++) {
+      particles.push(new Particle());
+    }
+
+    function drawLines() {
+      const isDarkMode = body.getAttribute('data-theme') === 'dark';
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            const alpha = (1 - dist / 150) * 0.15;
+            if (isDarkMode) {
+              ctx.strokeStyle = `rgba(0, 212, 255, ${alpha})`;
+            } else {
+              ctx.strokeStyle = `rgba(199, 91, 63, ${alpha * 0.5})`;
+            }
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, w, h);
+
+      const isDarkMode = body.getAttribute('data-theme') === 'dark';
+      const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w);
+      if (isDarkMode) {
+        gradient.addColorStop(0, 'rgba(20, 15, 40, 0.3)');
+        gradient.addColorStop(1, 'rgba(5, 8, 20, 0)');
+      } else {
+        gradient.addColorStop(0, 'rgba(255, 245, 235, 0.5)');
+        gradient.addColorStop(1, 'rgba(250, 245, 240, 0)');
+      }
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, w, h);
+
+      particles.forEach(p => { p.update(); p.draw(); });
+      drawLines();
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // ==================== 平滑滚动 ====================
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
